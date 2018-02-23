@@ -1,16 +1,13 @@
-const {MongoClient, ObjectID} = require('mongodb');
+module.exports.insert = (collection, user) => {
+  collection.insertOne(user).then(result => {
+      console.log(JSON.stringify(result, undefined, 2));
+    }, (err) => {
+      console.log('Unable to fetch Users', err);
+    });
+}
 
-module.exports.findUser = (name) => {
-  console.log(name);
-  MongoClient.connect('mongodb://localhost:27017', (err, client) => {
-    if (err){
-      return console.log('Unable to connect to MongoDB server');
-    }
-    console.log('Connected to MongoDB server')
-
-    const db = client.db('TodoApp');
-
-    db.collection('Users').find({name}).toArray().then((users) => {
+module.exports.findUser = (collection, name) => {
+  collection.find({name}).toArray().then((users) => {
       if (users.length == 0) {
         console.log(`No user found with name ${name}`);
       } else {
@@ -20,22 +17,10 @@ module.exports.findUser = (name) => {
     }, (err) => {
       console.log('Unable to fetch Users', err);
     });
-
-
-    // client.close();
-  });
 }
 
-module.exports.delete = (name) => {
-  MongoClient.connect('mongodb://localhost:27017', (err, client) => {
-    if (err){
-      return console.log('Unable to connect to MongoDB server');
-    }
-    console.log('Connected to MongoDB server')
-
-    const db = client.db('TodoApp');
-
-    db.collection('Users').find({name}).toArray().then(users => {
+module.exports.delete = (collection, name) => {
+  collection.find({name}).toArray().then(users => {
       if (users.length == 0) {
         console.log(`No user found with name ${name}`);
       } else {
@@ -50,27 +35,29 @@ module.exports.delete = (name) => {
     }, err => {
       console.log('Unable to delete Users');
     });
-
-    // client.close();
-  });
 }
 
-module.exports.deleteAll = (name) => {
-  MongoClient.connect('mongodb://localhost:27017', (err, client) => {
-    if (err){
-      return console.log('Unable to connect to MongoDB server');
-    }
-    console.log('Connected to MongoDB server')
-
-    const db = client.db('TodoApp');
-
-    // deleteMany
-    db.collection('Users').deleteMany({name}).then(result => {
+module.exports.deleteAll = (collection, name) => {
+  collection.deleteMany({name}).then(result => {
       console.log(result);
     }, err => {
       console.log('Unable to delete Users');
     });
+}
 
-    // client.close();
+module.exports.update = (collection, oldName, newName, incrementAmount) => {
+  collection.findOneAndUpdate({name: oldName}, {
+      $set: {
+        name: newName
+      }, 
+      $inc: {
+        age: incrementAmount
+      }
+    }, 
+    {
+      returnOriginal: false
+    })
+    .then(result => {
+      console.log(result);
   });
 }
