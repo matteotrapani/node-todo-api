@@ -1,9 +1,12 @@
 const request = require('supertest');
 
+const {ObjectID} = require('mongodb');
 const {app} = require('./../server');
 const {Todo} = require('./../models/todo');
 
+var _id = new ObjectID();
 const dummyTodos = [{
+    _id,
     text: 'first test todo'
 }, {
     text: 'second test todo'
@@ -11,7 +14,7 @@ const dummyTodos = [{
 
 beforeEach((done) => {
     Todo.remove({}).then(() => {
-        return Todo.insertMany(dummyTodos)
+        return Todo.insertMany(dummyTodos);
     }).then(() => done());
 })
 
@@ -65,4 +68,36 @@ describe('GET /todos', () => {
                 done();
             }).catch(e => done(e));
     })
+});
+
+describe('GET /todos/:id', () => {
+    it('should get specific todo', (done) => {
+        request(app)
+            .get(`/todos/${_id.toHexString()}`)
+            .expect(200)
+            .expect(res => {
+                expect(res.body.todo.text).toBe(dummyTodos[0].text);
+                done();
+            }).catch(e => done(e));
+    });
+
+    it('should check invalid ObjectID', (done) => {
+        request(app)
+            .get(`/todos/123`)
+            .expect(404)
+            .expect(res => {
+                expect(res.body).toEqual({});
+                done();
+            }).catch(e => done(e));
+    });
+    
+    it('should pass a not existing ID and return no todo', (done) => {
+        request(app)
+            .get(`/todos/${new ObjectID().toHexString()}`)
+            .expect(404)
+            .expect(res => {
+                expect(res.body).toEqual({});
+                done();
+            }).catch(e => done(e));
+    });
 })
