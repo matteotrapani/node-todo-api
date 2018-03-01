@@ -5,11 +5,15 @@ const {app} = require('./../server');
 const {Todo} = require('./../models/todo');
 
 var _id = new ObjectID();
+var _id2 = new ObjectID();
 const dummyTodos = [{
     _id,
     text: 'first test todo'
 }, {
-    text: 'second test todo'
+    _id: _id2,
+    text: 'second test todo',
+    completed: true,
+    completedAt: 333
 }]
 
 beforeEach((done) => {
@@ -141,4 +145,58 @@ describe('DELETE /todos/:id', () => {
                 done();
             }).catch(e => done(e));
     });
-})
+});
+
+describe('PATCH /todos/:id', () => {
+    it('should update a specific todo, setting completed to true and completedAt value', (done) => {
+        var hexId = _id.toHexString();
+        var text = "test";
+        request(app)
+            .patch(`/todos/${hexId}`)
+            .send({text, completed: true})
+            .expect(200)
+            .expect(res => {
+                expect(res.body.todo._id).toBe(hexId);
+                expect(res.body.todo.text).toBe(text);
+                expect(res.body.todo.completed).toBe(true);
+                expect(typeof res.body.todo.completedAt).toBe('number');
+                done();
+            }).catch(e => done(e));
+    });
+
+    it('should update a specific todo, setting completed to false and clear completedAt value', (done) => {
+        var hexId = _id2.toHexString();
+        var text = "test";
+        request(app)
+            .patch(`/todos/${hexId}`)
+            .send({text, completed: false})
+            .expect(200)
+            .expect(res => {
+                expect(res.body.todo._id).toBe(hexId);
+                expect(res.body.todo.text).toBe(text);
+                expect(res.body.todo.completed).toBe(false);
+                expect(res.body.todo.completedAt).toBe(null);
+                done();
+            }).catch(e => done(e));
+    });
+
+    it('should check invalid ObjectID and return 404', (done) => {
+        request(app)
+            .delete(`/todos/123`)
+            .expect(404)
+            .expect(res => {
+                expect(res.body).toEqual({});
+                done();
+            }).catch(e => done(e));
+    });
+    
+    it('should pass a not existing ID and return no todo with code 404', (done) => {
+        request(app)
+            .delete(`/todos/${new ObjectID().toHexString()}`)
+            .expect(404)
+            .expect(res => {
+                expect(res.body).toEqual({});
+                done();
+            }).catch(e => done(e));
+    });
+});
