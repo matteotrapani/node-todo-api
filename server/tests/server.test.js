@@ -4,38 +4,10 @@ const {ObjectID} = require('mongodb');
 const {app} = require('./../server');
 const {Todo} = require('./../models/todo');
 const {User} = require('./../models/user');
+const {dummyTodos, dummyUsers, populateTodos, populateUsers} = require('./seed/seed');
 
-var _id = new ObjectID();
-var _id2 = new ObjectID();
-const dummyTodos = [{
-    _id,
-    text: 'first test todo'
-}, {
-    _id: _id2,
-    text: 'second test todo',
-    completed: true,
-    completedAt: 333
-}]
-
-const dummyUsers = [{
-    _id,
-    email: 'test@example.com',
-    password: 'test123'
-}, {
-    _id: _id2,
-    email: 'test2@example.com',
-    password: 'test123'
-}]
-
-beforeEach((done) => {
-    Todo.remove({}).then(() => {
-        return Todo.insertMany(dummyTodos);
-    }).then(() => done());
-
-    User.remove({}).then(() => {
-        return User.insertMany(dummyUsers);
-    }).then(() => done());
-})
+beforeEach(populateUsers);
+beforeEach(populateTodos);
 
 describe('POST /todos', () => {
     test('should create a new todo', (done) => {
@@ -92,7 +64,7 @@ describe('GET /todos', () => {
 describe('GET /todos/:id', () => {
     it('should get specific todo', (done) => {
         request(app)
-            .get(`/todos/${_id.toHexString()}`)
+            .get(`/todos/${dummyTodos[0]._id.toHexString()}`)
             .expect(200)
             .expect(res => {
                 expect(res.body.todo.text).toBe(dummyTodos[0].text);
@@ -123,7 +95,7 @@ describe('GET /todos/:id', () => {
 
 describe('DELETE /todos/:id', () => {
     it('should remove specific todo', (done) => {
-        var hexId = _id.toHexString();
+        var hexId = dummyTodos[0]._id.toHexString();
         request(app)
             .delete(`/todos/${hexId}`)
             .expect(200)
@@ -133,7 +105,7 @@ describe('DELETE /todos/:id', () => {
             .end((err, res) => {
                 if (err)
                     return done(err);
-                Todo.findById(_id).then(todo => {
+                Todo.findById(dummyTodos[0]._id).then(todo => {
                     expect(todo).toBeFalsy();
                     done();
                 })
@@ -164,7 +136,7 @@ describe('DELETE /todos/:id', () => {
 
 describe('PATCH /todos/:id', () => {
     it('should update a specific todo, setting completed to true and completedAt value', (done) => {
-        var hexId = _id.toHexString();
+        var hexId = dummyTodos[0]._id.toHexString();
         var text = "test";
         request(app)
             .patch(`/todos/${hexId}`)
@@ -180,7 +152,7 @@ describe('PATCH /todos/:id', () => {
     });
 
     it('should update a specific todo, setting completed to false and clear completedAt value', (done) => {
-        var hexId = _id2.toHexString();
+        var hexId = dummyTodos[1]._id.toHexString();
         var text = "test";
         request(app)
             .patch(`/todos/${hexId}`)
@@ -328,4 +300,36 @@ describe('POST /users', () => {
                 }).catch(e => done(e));
             });
     });
+});
+
+describe('GET /users/me', () => {
+    test('should return user if authenticated', (done) => {
+        request(app)
+            .get('/users/me')
+            .set('x-auth', dummyUsers[0].tokens[0].token)
+            .expect(200)
+            .expect(res => {
+                expect(res.body.user.email).toBe(dummyUsers[0].email);
+                expect(res.body.user._id).toBe(dummyUsers[0]._id.toHexString());
+            })
+            .end((err, res) => {
+                if (err)
+                    return done(err);
+                done();
+            });
+    });
+
+    test('should return 401 if not authenticated', (done) => {
+        request(app)
+            .get('/users/me')
+            .expect(401)
+            .expect(res => {
+                expect(res.body).toEqual({});
+            })
+            .end((err, res) => {
+                if (err)
+                    done(err);
+                done();
+            });
+    })
 });
