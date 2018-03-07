@@ -333,3 +333,57 @@ describe('GET /users/me', () => {
             });
     })
 });
+
+describe('POST /users/login', () => {
+    test('should login and return auth token', (done) => {
+        request(app)
+            .post('/users/login')
+            .send({
+                email: dummyUsers[1].email,
+                password: dummyUsers[1].password
+            })
+            .expect(200)
+            .expect(res => {
+                expect(res.body.email).toBe(dummyUsers[1].email);
+                expect(res.headers['x-auth']).toBeTruthy();
+            })
+            .end((err, res) => {
+                if (err) 
+                    return done(err);
+                
+                User.findById(dummyUsers[1]._id).then(user => {
+                    expect(user.email).toBe(dummyUsers[1].email);
+                    expect(user.tokens.length).toBe(1);
+                    expect(user.tokens[0]).toEqual(expect.objectContaining({
+                        access: 'auth',
+                        token: res.headers['x-auth']
+                    }));
+                    done();
+                }).catch(e => done(e));
+            });
+    });
+
+    test('should not login with invalid data', (done) => {
+        request(app)
+            .post('/users/login')
+            .send({
+                email: 'email@test.com',
+                password: dummyUsers[1].password
+            })
+            .expect(400)
+            .expect(res => {
+                expect(res.body).toEqual({});
+                expect(res.headers['x-auth']).toBeFalsy();
+            })
+            .end((err, res) => {
+                if (err) 
+                    return done(err);
+                done();
+                User.findById(dummyUsers[1]._id).then(user => {
+                    expect(user.email).toBe(dummyUsers[1].email);
+                    expect(user.tokens.length).toBe(0);
+                    done();
+                }).catch(e => done(e));
+            });
+    });
+});
