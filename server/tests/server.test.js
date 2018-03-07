@@ -232,43 +232,6 @@ describe('POST /users', () => {
             });
     });
 
-    test('should not create users with same email', (done) => {
-        request(app)
-            .post('/users')
-            .send(userRequest)
-            .expect(200)
-            .expect(res => {
-                expect(res.body.email).toBe(userRequest.email);
-            })
-            .end((err, res) => {
-                if (err) 
-                    return done(err);
-                
-                User.find({
-                    email: userRequest.email
-                }).then(users => {
-                    expect(users.length).toBe(1);
-                    expect(users[0].email).toBe(userRequest.email);
-                }).catch(e => done(e));
-            });
-            request(app)
-                .post('/users')
-                .send(userRequest)
-                .expect(400)
-                .end((err, res) => {
-                    if (err) 
-                        return done(err);
-                    
-                    User.find({
-                        email: userRequest.email
-                    }).then(users => {
-                        expect(users.length).toBe(1);
-                        expect(users[0].email).toBe(userRequest.email);
-                        done();
-                    }).catch(e => done(e));
-                });
-    });
-
     test('should not create users with invalid email', (done) => {
         request(app)
             .post('/users')
@@ -385,5 +348,23 @@ describe('POST /users/login', () => {
                     done();
                 }).catch(e => done(e));
             });
+    });
+});
+
+describe('DELETE /users/me/token', () => {
+    it('should logout user if logged', (done) => {
+        var token = dummyUsers[0].tokens[0].token;
+        request(app)
+            .delete(`/users/me/token`)
+            .set('x-auth', token)
+            .expect(200)
+            .end((err, res) => {
+                if (err)
+                    return done(err);
+                User.findById(dummyUsers[0]._id).then(user => {
+                    expect(user.tokens.length).toBe(0);
+                    done();
+                }).catch(e => done(e));
+            })
     });
 });
